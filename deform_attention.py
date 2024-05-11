@@ -94,15 +94,13 @@ class MSDeformAttn(nn.Module):
         xavier_uniform_(self.output_proj.weight.data)
         constant_(self.output_proj.bias.data, 0.)
 
-    def forward(self, query, reference_points, input_flatten, input_spatial_shapes, input_level_start_index,
-                input_padding_mask=None):
+    def forward(self, query, reference_points, input_flatten, input_spatial_shapes, input_padding_mask=None):
         """
         :param query                       (N, L_q, C)
         :param reference_points            (N, L_q, n_levels, 2), range in [0, 1], top-left (0,0), bottom-right (1, 1), including padding area
                                         or (N, L_q, n_levels, 4), add additional (w, h) to form reference boxes
         :param input_flatten               (N, sum(H) * sum(W), C)
         :param input_spatial_shapes        (n_levels, 2), [(H_0, W_0), (H_1, W_1), ..., (H_{L-1}, W_{L-1})]
-        :param input_level_start_index     (n_levels, ), [0, H_0*W_0, H_0*W_0+H_1*W_1, H_0*W_0+H_1*W_1+H_2*W_2, ..., H_0*W_0+H_1*W_1+...+H_{L-1}*W_{L-1}]
         :param input_padding_mask          (N, sum(H) * sum(W)), True for padding elements, False for non-padding elements
 
         :return output                     (N, L_q, C)
