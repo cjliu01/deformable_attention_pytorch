@@ -16,8 +16,7 @@ from torch.nn.init import xavier_uniform_, constant_
 
 
 def ms_deform_attn_core_pytorch(value, value_spatial_shapes, sampling_locations, attention_weights):
-    # for debug and test only,
-    # need to use cuda version instead
+    # for debug and test only, pure implementation of MSDeformAttn
     N_, S_, M_, D_ = value.shape
     _, Lq_, M_, L_, P_, _ = sampling_locations.shape
     value_list = value.split([H_ * W_ for H_, W_ in value_spatial_shapes], dim=1)
@@ -64,8 +63,6 @@ class MSDeformAttn(nn.Module):
                 "You'd better set d_model in MSDeformAttn to make the dimension of each attention head a power of 2 "
                 "which is more efficient in our CUDA implementation.")
 
-        self.im2col_step = 64
-
         self.d_model = d_model
         self.n_levels = n_levels
         self.n_heads = n_heads
@@ -100,15 +97,15 @@ class MSDeformAttn(nn.Module):
     def forward(self, query, reference_points, input_flatten, input_spatial_shapes, input_level_start_index,
                 input_padding_mask=None):
         """
-        :param query                       (N, Length_{query}, C)
-        :param reference_points            (N, Length_{query}, n_levels, 2), range in [0, 1], top-left (0,0), bottom-right (1, 1), including padding area
-                                        or (N, Length_{query}, n_levels, 4), add additional (w, h) to form reference boxes
-        :param input_flatten               (N, \sum_{l=0}^{L-1} H_l \cdot W_l, C)
+        :param query                       (N, L_q, C)
+        :param reference_points            (N, L_q, n_levels, 2), range in [0, 1], top-left (0,0), bottom-right (1, 1), including padding area
+                                        or (N, L_q, n_levels, 4), add additional (w, h) to form reference boxes
+        :param input_flatten               (N, sum(H) * sum(W), C)
         :param input_spatial_shapes        (n_levels, 2), [(H_0, W_0), (H_1, W_1), ..., (H_{L-1}, W_{L-1})]
         :param input_level_start_index     (n_levels, ), [0, H_0*W_0, H_0*W_0+H_1*W_1, H_0*W_0+H_1*W_1+H_2*W_2, ..., H_0*W_0+H_1*W_1+...+H_{L-1}*W_{L-1}]
-        :param input_padding_mask          (N, \sum_{l=0}^{L-1} H_l \cdot W_l), True for padding elements, False for non-padding elements
+        :param input_padding_mask          (N, sum(H) * sum(W)), True for padding elements, False for non-padding elements
 
-        :return output                     (N, Length_{query}, C)
+        :return output                     (N, L_q, C)
         """
         N, Len_q, _ = query.shape
         N, Len_in, _ = input_flatten.shape
